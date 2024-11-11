@@ -25,20 +25,22 @@ export async function convertPDF(file: File, format: ConversionFormat): Promise<
 
 async function convertToWord(arrayBuffer: ArrayBuffer): Promise<Blob> {
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const doc = new Document({
-    sections: []
-  });
+  const sections = [];
   
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const text = textContent.items.map((item: any) => item.str).join(' ');
     
-    doc.addSection({
+    sections.push({
       properties: { type: SectionType.CONTINUOUS },
       children: [new Paragraph({ text })]
     });
   }
+  
+  const doc = new Document({
+    sections: sections
+  });
   
   return await Packer.toBlob(doc);
 }
