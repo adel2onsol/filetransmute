@@ -1,6 +1,6 @@
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
-import { Document, Packer, Paragraph } from 'docx';
+import { Document, Packer, Paragraph, SectionType } from 'docx';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
@@ -24,21 +24,27 @@ export async function convertPDF(file: File, format: ConversionFormat): Promise<
 }
 
 async function convertToWord(arrayBuffer: ArrayBuffer): Promise<Blob> {
-  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-  const doc = new Document();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const doc = new Document({
+    sections: []
+  });
   
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const text = textContent.items.map((item: any) => item.str).join(' ');
-    doc.addSection({ children: [new Paragraph({ text })] });
+    
+    doc.addSection({
+      properties: { type: SectionType.CONTINUOUS },
+      children: [new Paragraph({ text })]
+    });
   }
   
   return await Packer.toBlob(doc);
 }
 
 async function convertToImage(arrayBuffer: ArrayBuffer, format: 'png' | 'jpeg'): Promise<Blob> {
-  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page = await pdf.getPage(1);
   const viewport = page.getViewport({ scale: 2.0 });
   
@@ -60,7 +66,7 @@ async function convertToImage(arrayBuffer: ArrayBuffer, format: 'png' | 'jpeg'):
 }
 
 async function convertToText(arrayBuffer: ArrayBuffer): Promise<Blob> {
-  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let text = '';
   
   for (let i = 1; i <= pdf.numPages; i++) {
